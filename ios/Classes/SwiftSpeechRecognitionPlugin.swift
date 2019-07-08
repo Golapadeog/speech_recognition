@@ -30,26 +30,23 @@ public class SwiftSpeechRecognitionPlugin: NSObject, FlutterPlugin, SFSpeechReco
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult)
   {
-    //result("iOS " + UIDevice.current.systemVersion)
-    switch (call.method)
+    switch(call.method)
     {
-    case "speech.activate":
-      self.activateRecognition(result: result)
-    case "speech.listen":
-      self.startRecognition(lang: call.arguments as! String, result: result)
-    case "speech.cancel":
-      self.cancelRecognition(result: result)
-    case "speech.stop":
-      self.stopRecognition(result: result)
-    default:
-      result(FlutterMethodNotImplemented)
+      case "speech.activate":
+        self.activateRecognition(result: result)
+      case "speech.listen":
+        self.startRecognition(lang: call.arguments as! String, result: result)
+      case "speech.cancel":
+        self.cancelRecognition(result: result)
+      case "speech.stop":
+        self.stopRecognition(result: result)
+      default:
+        result(FlutterMethodNotImplemented)
     }
   }
 
   private func activateRecognition(result: @escaping FlutterResult)
   {
-    speechRecognizer.delegate = self
-
     SFSpeechRecognizer.requestAuthorization
     {
         authStatus in
@@ -85,7 +82,8 @@ public class SwiftSpeechRecognitionPlugin: NSObject, FlutterPlugin, SFSpeechReco
       audioEngine.stop()
       recognitionRequest?.endAudio()
       result(false)
-    } else
+    } 
+    else
     {
       try! start(lang: lang)
       result(true)
@@ -135,59 +133,52 @@ public class SwiftSpeechRecognitionPlugin: NSObject, FlutterPlugin, SFSpeechReco
 
     recognitionRequest.shouldReportPartialResults = true
 
-    if let speechRecognizer = getRecognizer(lang: lang)
+    if let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: lang))
     {
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest)
-        {
-            result, error in
-            
-            var isFinal = false
-            
-            if let result = result
-            {
-                print("Speech : \(result.bestTranscription.formattedString)")
-                self.speechChannel?.invokeMethod("speech.onSpeech", arguments: result.bestTranscription.formattedString)
-                isFinal = result.isFinal
-                if isFinal
-                {
-                    self.speechChannel!.invokeMethod(
-                        "speech.onRecognitionComplete",
-                        arguments: result.bestTranscription.formattedString
-                    )
-                }
-            }
-            
-            if error != nil || isFinal
-            {
-                self.audioEngine.stop()
-                inputNode.removeTap(onBus: 0)
-                self.recognitionRequest = nil
-                self.recognitionTask = nil
-            }
-        }
-        
-        let recognitionFormat = inputNode.outputFormat(forBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recognitionFormat)
-        {
-            (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-            self.recognitionRequest?.append(buffer)
-        }
-        
-        audioEngine.prepare()
-        try audioEngine.start()
-        
-        speechChannel!.invokeMethod("speech.onRecognitionStarted", arguments: nil)
+      speechRecognizer.delegate = self
+      
+      recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest)
+      {
+          result, error in
+          
+          var isFinal = false
+          
+          if let result = result
+          {
+              print("Speech : \(result.bestTranscription.formattedString)")
+              self.speechChannel?.invokeMethod("speech.onSpeech", arguments: result.bestTranscription.formattedString)
+              isFinal = result.isFinal
+              if isFinal
+              {
+                  self.speechChannel?.invokeMethod("speech.onRecognitionComplete", arguments: result.bestTranscription.formattedString)
+              }
+          }
+          
+          if error != nil || isFinal
+          {
+              self.audioEngine.stop()
+              inputNode.removeTap(onBus: 0)
+              self.recognitionRequest = nil
+              self.recognitionTask = nil
+          }
+      }
+      
+      let recognitionFormat = inputNode.outputFormat(forBus: 0)
+      inputNode.installTap(onBus: 0, bufferSize: 1024, format: recognitionFormat)
+      {
+          (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
+          self.recognitionRequest?.append(buffer)
+      }
+      
+      audioEngine.prepare()
+      try audioEngine.start()
+      
+      speechChannel?.invokeMethod("speech.onRecognitionStarted", arguments: nil)
     }
     else
     {
         fatalError("Unable to created a speechRecognizer object for language \(lang)")
     }
-  }
-
-  private func getRecognizer(lang: String) -> Speech.SFSpeechRecognizer?
-  {
-    speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: lang))
-    return speechRecognizer
   }
 
   public func speechRecognizer(_ speechRecognizer: SFSpeechRecognizer, availabilityDidChange available: Bool)
