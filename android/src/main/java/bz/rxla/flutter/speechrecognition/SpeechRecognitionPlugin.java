@@ -62,8 +62,8 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
             case "speech.activate":
                 // FIXME => Dummy activation verification : we assume that speech recognition permission
                 // is declared in the manifest and accepted during installation ( AndroidSDK 21- )
-                Locale locale = activity.getResources().getConfiguration().locale;
-                speechChannel.invokeMethod("speech.onCurrentLocale", locale.toString());
+                //Locale locale = activity.getResources().getConfiguration().locale;
+                //speechChannel.invokeMethod("speech.onCurrentLocale", locale.toString());
                 //Log.d(LOG_TAG, "Current Locale : " + locale.toString());
                 result.success(true);
                 break;
@@ -129,7 +129,7 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
     public void onError(int error) 
     {
         //Log.d(LOG_TAG, "onError : " + error);
-        speechChannel.invokeMethod("speech.onSpeechAvailability", false);
+        //speechChannel.invokeMethod("speech.onSpeechAvailability", false);
         speechChannel.invokeMethod("speech.onError", error);
     }
 
@@ -148,7 +148,7 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
     @Override
     public void onEvent(int eventType, Bundle params) 
     {
-        //Log.d(LOG_TAG, "onEvent : " + eventType);
+        Log.d(LOG_TAG, "onEvent : " + eventType);
     }
 
     @Override
