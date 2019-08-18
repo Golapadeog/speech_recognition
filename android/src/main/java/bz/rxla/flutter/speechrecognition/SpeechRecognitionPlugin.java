@@ -2,6 +2,9 @@ package bz.rxla.flutter.speechrecognition;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.Context;
+import android.provider.Settings;
+import android.net.Uri;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -26,6 +29,7 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
     private String transcription = "";
     private Intent recognizerIntent;
     private Activity activity;
+    private final Registrar registrar;
 
     /**
      * Plugin registration.
@@ -35,17 +39,18 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
         if(registrar.activity() != null)
         {
             final MethodChannel channel = new MethodChannel(registrar.messenger(), "speech_recognition");
-            channel.setMethodCallHandler(new SpeechRecognitionPlugin(registrar.activity(), channel));
+            channel.setMethodCallHandler(new SpeechRecognitionPlugin(registrar, channel));
         }
     }
 
-    private SpeechRecognitionPlugin(Activity activity, MethodChannel channel) 
+    private SpeechRecognitionPlugin(Registrar registrar, MethodChannel channel) 
     {
         this.speechChannel = channel;
         this.speechChannel.setMethodCallHandler(this);
-        this.activity = activity;
+        this.activity = registrar.activity();
+        this.registrar = registrar;
 
-        speech = SpeechRecognizer.createSpeechRecognizer(activity.getApplicationContext());
+        speech = SpeechRecognizer.createSpeechRecognizer(registrar.activity().getApplicationContext());
         speech.setRecognitionListener(this);
 
         recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -71,6 +76,14 @@ public class SpeechRecognitionPlugin implements MethodCallHandler, RecognitionLi
             case "speech.listen":
                 recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, call.arguments.toString());
                 speech.startListening(recognizerIntent);
+                result.success(true);
+                break;
+            case "speech.openGoogleSettings":
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                Uri uri = Uri.fromParts("package", "com.google.android.googlequicksearchbox", null);
+                intent.setData(uri);
+                registrar.activity().startActivity(intent);
                 result.success(true);
                 break;
             case "speech.cancel":
